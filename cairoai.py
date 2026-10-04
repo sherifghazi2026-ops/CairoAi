@@ -110,7 +110,16 @@ SPACES = {
 #  Config Layer
 # ═══════════════════════════════════════════════════════════════════════
 def load_config():
-    """قراءة config.json"""
+    """قراءة config.json — يدعم ENV var للـ Render"""
+    # 1) من ENV (للـ Render)
+    env_json = os.environ.get("CONFIG_JSON", "").strip()
+    if env_json:
+        try:
+            return json.loads(env_json)
+        except Exception as e:
+            print(f"⚠️ فشل قراءة CONFIG_JSON: {e}")
+    
+    # 2) من الملف (للتشغيل المحلي)
     if not CONFIG_PATH.exists():
         return {
             "accounts": [],
