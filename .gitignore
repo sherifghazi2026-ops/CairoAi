@@ -1,0 +1,43 @@
+# ═══ حساس ═══
+config.json
+config.json.bak*
+config.json.before_*
+config.local.json
+.env
+.env.*
+*.env
+
+# ═══ Backups / Old versions ═══
+*.old
+*.old.*
+*.bak
+*.bak2
+*.before_*
+*.pre_*
+*.broken
+*.before_*.json
+*.before_*.py
+*.before_*.mp4
+
+# ═══ Outputs ═══
+outputs/
+uploads/
+logs/
+*.log
+*.pid
+
+# ═══ Python ═══
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+
+# ═══ ملفات تجربة ═══
+spaces_analysis.json
+analysis*.json
+temp*.json
+
+# ═══ Termux ═══
+.tmux/
