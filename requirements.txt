@@ -1,3 +1,5 @@
+flask
 gradio_client
 python-dotenv
 requests
+gunicorn

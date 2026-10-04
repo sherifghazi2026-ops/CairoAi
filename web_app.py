@@ -1661,13 +1661,14 @@ def api_status():
 #  Main
 # ═══════════════════════════════════════════════════════════════════════
 if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
     print()
     print("=" * 60)
     print("  CairoAi v7.0 - Multi-User Web")
     print("=" * 60)
     print(f"  Users: {', '.join(u['name'] for u in USERS)}")
-    print(f"  Port:  5000")
-    print(f"  URL:   http://localhost:5000")
+    print(f"  Port:  {port}")
+    print(f"  URL:   http://0.0.0.0:{port}")
     print("=" * 60)
     print()
-    app.run(host="0.0.0.0", port=5000, debug=False, threaded=True)
+    app.run(host="0.0.0.0", port=port, debug=False, threaded=True)

@@ -127,7 +127,12 @@ def load_config():
 
 
 def save_config(cfg):
-    """حفظ config.json"""
+    """حفظ config.json — يتحطّل لو ENV active"""
+    # لو على Render (env var) → ما نكتبش
+    if os.environ.get("CONFIG_JSON", "").strip():
+        # في الذاكرة بس — التعديلات مش بتتحفظ
+        # (محتاج DB في المستقبل)
+        return
     CONFIG_PATH.write_text(
         json.dumps(cfg, indent=2, ensure_ascii=False),
         encoding="utf-8",
