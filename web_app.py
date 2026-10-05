@@ -875,22 +875,43 @@ textarea { resize: vertical; min-height: 110px; line-height: 1.7; }
 
   <div id="tab-my-videos" class="tab-content">
     <div class="card">
-      <h2 style="margin-bottom:15px;">📼 فيديوهاتي ({{ videos_count }})</h2>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+        <h2 style="margin:0;">📼 فيديوهاتي ({{ videos_count }})</h2>
+        {% if videos %}
+        <form method="POST" style="margin:0;" onsubmit="return confirm('⚠️ حذف كل الفيديوهات؟\n\nلا يمكن التراجع!');">
+          <input type="hidden" name="action" value="delete_all_videos">
+          <button type="submit" class="btn-sm btn-del" style="padding:8px 16px; font-size:13px;">
+            🗑️ حذف الكل
+          </button>
+        </form>
+        {% endif %}
+      </div>
       {% if videos %}
       <div class="videos-grid">
         {% for v in videos %}
         <div class="video-card">
-          <video preload="metadata" muted>
+          <video preload="none" controls muted
+                 poster="/thumb/{{ user_id }}/{{ v.name }}"
+                 onclick="this.play()">
             <source src="{{ v.url }}" type="video/mp4">
           </video>
           <div class="info">
             <div class="filename">{{ v.name }}</div>
             <div class="meta">
-              <span>{{ v.size_mb }} MB</span>
-              <span>{{ v.date }}</span>
+              <span>📦 {{ v.size_mb }} MB</span>
+              <span>🕐 {{ v.date }}</span>
             </div>
-            <div style="margin-top:8px; text-align:center;">
-              <a href="{{ v.url }}" download class="download-btn">⬇️ تحميل</a>
+            <div style="margin-top:10px; display:flex; gap:6px;">
+              <a href="{{ v.url }}" download class="download-btn" style="flex:1; text-align:center;">
+                ⬇️ تحميل
+              </a>
+              <form method="POST" style="margin:0; flex:1;" onsubmit="return confirm('حذف {{ v.name }}؟');">
+                <input type="hidden" name="action" value="delete_video">
+                <input type="hidden" name="filename" value="{{ v.name }}">
+                <button type="submit" class="btn-sm btn-del" style="width:100%; padding:8px; font-size:12px;">
+                  🗑️ حذف
+                </button>
+              </form>
             </div>
           </div>
         </div>
@@ -1529,6 +1550,39 @@ def index():
                     break
             return redirect(url_for("index"))
 
+        # ═══ حذف فيديو واحد ═══
+        if action == "delete_video":
+            filename = request.form.get("filename", "").strip()
+            if not filename:
+                flash("اسم الملف مطلوب", "error")
+            else:
+                safe = secure_filename(filename)
+                video_path = OUTPUT_DIR / user_id / safe
+                if video_path.exists() and video_path.is_file():
+                    video_path.unlink()
+                    print(f"[{user_name}] deleted video: {safe}")
+                    flash(f"تم حذف {safe}", "success")
+                else:
+                    flash("الفيديو مش موجود", "error")
+            return redirect(url_for("index"))
+
+        # ═══ حذف كل الفيديوهات ═══
+        if action == "delete_all_videos":
+            user_vids_dir = OUTPUT_DIR / user_id
+            if user_vids_dir.exists():
+                count = 0
+                for f in user_vids_dir.glob("*.mp4"):
+                    try:
+                        f.unlink()
+                        count += 1
+                    except Exception:
+                        pass
+                print(f"[{user_name}] deleted {count} videos")
+                flash(f"تم حذف {count} فيديو", "success")
+            else:
+                flash("مافيش فيديوهات", "error")
+            return redirect(url_for("index"))
+
         if action == "generate":
             try:
                 mode = request.form.get("mode", "img2video")
@@ -1631,6 +1685,33 @@ def index():
         hidden_spaces=get_hidden_spaces(user_id),
         default_space="zeroscope",
     )
+
+
+@app.route("/thumb/<user_id>/<filename>")
+@login_required
+def serve_thumb(user_id, filename):
+    """SVG placeholder للفيديوهات (لتقليل التحميل)"""
+    if user_id != current_user_id():
+        return "Forbidden", 403
+    
+    # SVG placeholder
+    svg = """<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#312e81;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="320" height="180" fill="url(#bg)"/>
+  <circle cx="160" cy="80" r="35" fill="rgba(139,92,246,0.2)" stroke="rgba(139,92,246,0.6)" stroke-width="2"/>
+  <polygon points="150,65 150,95 175,80" fill="#a78bfa"/>
+  <text x="160" y="145" fill="#a5b4fc" font-size="14" font-family="Arial, sans-serif" 
+        text-anchor="middle" font-weight="600">🎬 CairoAi</text>
+  <text x="160" y="163" fill="#6b7280" font-size="10" font-family="Arial, sans-serif" 
+        text-anchor="middle">اضغط للتشغيل</text>
+</svg>"""
+    
+    return svg, 200, {"Content-Type": "image/svg+xml", "Cache-Control": "public, max-age=86400"}
 
 
 @app.route("/video/<user_id>/<filename>")
