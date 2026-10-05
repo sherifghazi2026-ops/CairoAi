@@ -523,6 +523,74 @@ def _call_cogvideo(client, img1, img2, prompt, duration, height, width, seed):
     return _extract_video(result)
 
 
+def _call_custom(client, img1, img2, prompt, duration, height, width, seed):
+    """
+    Generic caller للـ custom Spaces.
+    يجرب args شائعة.
+    """
+    # جرّب args متعددة حسب interface
+    attempts = []
+    
+    # 1) صورة + prompt (شائع في img2video)
+    if img1:
+        attempts.append((
+            "img+prompt",
+            lambda: client.predict(
+                handle_file(str(img1)),
+                prompt,
+                api_name="/video",
+            )
+        ))
+    
+    # 2) صورة + prompt + height + width + duration
+    if img1:
+        attempts.append((
+            "img+prompt+whd",
+            lambda: client.predict(
+                handle_file(str(img1)),
+                prompt,
+                width, height, duration,
+                api_name="/video",
+            )
+        ))
+    
+    # 3) صورة + prompt + duration + seed
+    if img1:
+        attempts.append((
+            "img+prompt+dur+seed",
+            lambda: client.predict(
+                handle_file(str(img1)),
+                prompt,
+                duration, seed,
+                api_name="/video",
+            )
+        ))
+    
+    # 4) prompt فقط (text2video)
+    attempts.append((
+        "prompt-only",
+        lambda: client.predict(
+            prompt,
+            api_name="/video",
+        )
+    ))
+    
+    last_err = None
+    for name, fn in attempts:
+        try:
+            print(f"   🔄 محاولة: {name}")
+            result = fn()
+            video = _extract_video(result)
+            if video:
+                print(f"   ✅ نجح: {name}")
+                return video
+        except Exception as e:
+            last_err = f"{type(e).__name__}: {str(e)[:150]}"
+            print(f"   ❌ فشل: {name} → {last_err}")
+    
+    return None
+
+
 SPACE_CALLERS = {
     "ltx_distilled": _call_ltx_distilled,
     "wan_fast": _call_wan_fast,
@@ -530,6 +598,7 @@ SPACE_CALLERS = {
     "zeroscope": _call_zeroscope,
     "svd": _call_svd,
     "cogvideo": _call_cogvideo,
+    "custom": _call_custom,
 }
 
 

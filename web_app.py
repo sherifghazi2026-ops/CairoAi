@@ -1295,13 +1295,23 @@ window.addEventListener('DOMContentLoaded', function() {
     setTimeout(() => setMode(checkedMode.value), 100);
   }
   
-  setTimeout(function() {
-    document.querySelectorAll('.flash').forEach(el => {
-      el.style.transition = 'opacity 0.5s';
+  // مافيش auto-hide — الرسالة تفضل لحد ما المستخدم يضغط ✕ أو يعمل refresh
+  // نضيف زر ✕ لكل flash
+  document.querySelectorAll('.flash').forEach(el => {
+    if (el.querySelector('.flash-close')) return;
+    const btn = document.createElement('button');
+    btn.className = 'flash-close';
+    btn.innerHTML = '✕';
+    btn.setAttribute('aria-label', 'إغلاق');
+    btn.onclick = () => {
+      el.style.transition = 'opacity 0.3s';
       el.style.opacity = '0';
-      setTimeout(() => el.remove(), 500);
-    });
-  }, 5000);
+      setTimeout(() => el.remove(), 300);
+    };
+    el.style.position = 'relative';
+    el.style.paddingLeft = '40px';
+    el.appendChild(btn);
+  });
 });
 </script>
 </body>
