@@ -101,7 +101,9 @@ def _record_attempt(ip):
 def login_required(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
-        if not session.get("logged_in"):
+        # تحقق من logged_in و user_id معًا
+        if not session.get("logged_in") or not session.get("user_id"):
+            session.clear()  # ← نظّف الجلسة المكسورة
             if request.path.startswith("/api/") or request.is_json:
                 return jsonify({"success": False, "error": "unauthorized"}), 401
             return redirect(url_for("login", next=request.path))
@@ -239,6 +241,8 @@ def save_upload(file, prefix, user_id):
 
 
 def user_videos(user_id):
+    if not user_id:
+        return []
     d = OUTPUT_DIR / user_id
     if not d.exists():
         return []
@@ -963,7 +967,17 @@ textarea { resize: vertical; min-height: 110px; line-height: 1.7; }
     <div class="card accounts-section">
       <div class="section-header">
         <h3>👥 إدارة الحسابات</h3>
-        <span style="font-size:12px;color:#94a3b8;">{{ user_accounts|length }} حساب</span>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          {% if user_accounts %}
+          <form method="POST" style="margin:0;">
+            <input type="hidden" name="action" value="check_all_quotas">
+            <button type="submit" class="btn btn-warning" style="padding:6px 14px; font-size:12px; font-weight:700; cursor:pointer;">
+              🔄 فحص الكل
+            </button>
+          </form>
+          {% endif %}
+          <span style="font-size:12px;color:#94a3b8;">{{ user_accounts|length }} حساب</span>
+        </div>
       </div>
 
       {% if user_accounts %}
@@ -1549,6 +1563,37 @@ def index():
                         break
                 save_config(cfg)
                 flash("تم تحديث التوكن", "success")
+            return redirect(url_for("index"))
+
+        # ═══ فحص كل الـ quotas ═══
+        if action == "check_all_quotas":
+            cfg = load_config()
+            user_account_ids = set(get_user_accounts(user_id))
+            checked = 0
+            total_available = 0
+            for a in cfg.get("accounts", []):
+                if a["id"] not in user_account_ids:
+                    continue
+                q = check_quota(a["token"])
+                if q:
+                    cur = q.get("current", 0)
+                    base = q.get("base", 300)
+                    runs = q.get("runs", {})
+                    a["quota"] = {
+                        "total_seconds": base,
+                        "used_seconds": cur,
+                        "remaining_seconds": max(0, base - cur),
+                        "total_runs": runs.get("limit", 8),
+                        "used_runs": runs.get("used", 0),
+                        "remaining_runs": runs.get("remaining", 8),
+                    }
+                    a["reset_at"] = q.get("resetsAt") or q.get("resets_at")
+                    a["last_check"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+                    checked += 1
+                    if a["quota"]["remaining_seconds"] > 30 and a["quota"]["remaining_runs"] > 0:
+                        total_available += 1
+            save_config(cfg)
+            flash(f"✅ تم فحص {checked} حساب | {total_available} متاح للاستخدام", "success")
             return redirect(url_for("index"))
 
         # ═══ فحص quota ═══

@@ -250,6 +250,31 @@ def get_spaces_for_user(cfg, user_id=None):
         spaces[sp_key]["modes"] = modes
         spaces[sp_key]["needs_image"] = supports_img
     
+    # ═══ أضف custom_spaces ═══
+    for csp in user.get("custom_spaces", []):
+        key = csp.get("key")
+        if not key or key in spaces:
+            continue
+        
+        _s_img = csp.get("supports_img", True)
+        _s_txt = csp.get("supports_txt", False)
+        
+        _modes = []
+        if _s_img:
+            _modes.append("image-to-video")
+        if _s_txt:
+            _modes.append("text-to-video")
+        
+        spaces[key] = {
+            "id": csp.get("id", ""),
+            "name": csp.get("name", "Custom"),
+            "type": "custom",
+            "endpoint": csp.get("endpoint", "/video"),
+            "modes": _modes,
+            "needs_image": _s_img,
+            "max_duration": 10,
+            "default_duration": 4,
+        }
     return spaces
 
 
