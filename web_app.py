@@ -188,6 +188,35 @@ def save_user_accounts(user_id, account_ids):
     save_config(cfg)
 
 
+def make_thumbnail(video_path, thumb_path):
+    """استخراج frame من الفيديو كـ thumbnail"""
+    try:
+        import subprocess
+        result = subprocess.run(
+            [
+                "ffmpeg", "-y",
+                "-i", str(video_path),
+                "-ss", "00:00:01",   # عند الثانية 1
+                "-vframes", "1",       # إطار واحد
+                "-vf", "scale=320:-1", # عرض 320 px
+                "-q:v", "5",           # جودة متوسطة
+                str(thumb_path),
+            ],
+            capture_output=True,
+            timeout=15,
+        )
+        if result.returncode != 0:
+            print(f"⚠️ ffmpeg فشل: {result.stderr.decode()[:200]}")
+            return False
+        return True
+    except FileNotFoundError:
+        print("⚠️ ffmpeg مش مثبت")
+        return False
+    except Exception as e:
+        print(f"⚠️ thumbnail فشل: {e}")
+        return False
+
+
 def user_dir(user_id):
     d = OUTPUT_DIR / user_id
     d.mkdir(exist_ok=True)
@@ -216,9 +245,12 @@ def user_videos(user_id):
     vids = []
     for f in sorted(d.glob("*.mp4"), key=lambda p: p.stat().st_mtime, reverse=True):
         st = f.stat()
+        thumb_path = d / f"{f.name}.jpg"
+        thumbnail = f"/thumb/{user_id}/{f.name}" if thumb_path.exists() else None
         vids.append({
             "name": f.name,
             "url": f"/video/{user_id}/{f.name}",
+            "thumbnail": thumbnail,
             "size_mb": round(st.st_size / 1024 / 1024, 2),
             "date": datetime.fromtimestamp(st.st_mtime).strftime("%Y-%m-%d %H:%M"),
         })
@@ -1651,6 +1683,10 @@ def index():
                 dst = user_dir(user_id) / f"{user_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4"
                 shutil.move(str(src), str(dst))
 
+                # ═══ نعمل thumbnail ═══
+                thumb_path = dst.parent / f"{dst.name}.jpg"
+                make_thumbnail(dst, thumb_path)
+
                 video_url = f"/video/{user_id}/{dst.name}"
                 flash(f"تم التوليد بـ {result.get('account_used', '?')}", "success")
 
@@ -1690,11 +1726,31 @@ def index():
 @app.route("/thumb/<user_id>/<filename>")
 @login_required
 def serve_thumb(user_id, filename):
-    """SVG placeholder للفيديوهات (لتقليل التحميل)"""
+    """يخدم thumbnail للفيديو"""
     if user_id != current_user_id():
         return "Forbidden", 403
     
-    # SVG placeholder
+    # نبني مسار الـ thumbnail: video.mp4 → video.mp4.jpg
+    safe = secure_filename(filename)
+    thumb_filename = f"{safe}.jpg"
+    thumb_path = OUTPUT_DIR / user_id / thumb_filename
+    
+    # لو مش موجود → نحاول نعمله
+    if not thumb_path.exists():
+        video_path = OUTPUT_DIR / user_id / safe
+        if video_path.exists():
+            ok = make_thumbnail(video_path, thumb_path)
+            if not ok:
+                # فشل → SVG placeholder
+                return svg_placeholder(), 200, {"Content-Type": "image/svg+xml"}
+        else:
+            return svg_placeholder(), 200, {"Content-Type": "image/svg+xml"}
+    
+    return send_file(str(thumb_path), mimetype="image/jpeg")
+
+
+def svg_placeholder():
+    """SVG placeholder للفيديوهات"""
     svg = """<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -1703,15 +1759,10 @@ def serve_thumb(user_id, filename):
     </linearGradient>
   </defs>
   <rect width="320" height="180" fill="url(#bg)"/>
-  <circle cx="160" cy="80" r="35" fill="rgba(139,92,246,0.2)" stroke="rgba(139,92,246,0.6)" stroke-width="2"/>
-  <polygon points="150,65 150,95 175,80" fill="#a78bfa"/>
-  <text x="160" y="145" fill="#a5b4fc" font-size="14" font-family="Arial, sans-serif" 
-        text-anchor="middle" font-weight="600">🎬 CairoAi</text>
-  <text x="160" y="163" fill="#6b7280" font-size="10" font-family="Arial, sans-serif" 
-        text-anchor="middle">اضغط للتشغيل</text>
+  <text x="160" y="80" fill="#a5b4fc" font-size="48" text-anchor="middle" dominant-baseline="middle">🎬</text>
+  <text x="160" y="150" fill="#6b7280" font-size="12" font-family="Arial, sans-serif" text-anchor="middle">اضغط للتشغيل</text>
 </svg>"""
-    
-    return svg, 200, {"Content-Type": "image/svg+xml", "Cache-Control": "public, max-age=86400"}
+    return svg
 
 
 @app.route("/video/<user_id>/<filename>")
