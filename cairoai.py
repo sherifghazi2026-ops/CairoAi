@@ -406,8 +406,8 @@ def _call_ltx_distilled(client, img1, img2, prompt, duration, height, width, see
         "worst quality, inconsistent motion, blurry, jittery, distorted",
         handle_file(str(img1)),
         None,  # input_video
-        height,
         width,
+        height,
         "image-to-video",
         duration,   # duration_ui
         max(9, int(duration * 8)),  # ui_frames_to_use
@@ -425,8 +425,8 @@ def _call_wan_fast(client, img1, img2, prompt, duration, height, width, seed):
     result = client.predict(
         handle_file(str(img1)),
         prompt,
-        height,
         width,
+        height,
         "worst quality, blurry, distorted, static, watermark",
         duration,   # duration_seconds
         1.0,        # guidance_scale
