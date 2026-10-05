@@ -661,15 +661,15 @@ def generate_video(
         try:
             _rq = check_quota(acc["token"])
             if _rq:
-                _rem = _rq.get("base", 300) - _rq.get("current", 0)
+                _rem = _rq.get("current", 0)
                 if _rem < 30:
                     print(f"   HF live: {_rem:.0f}s فقط - نتخطاه")
                     for _a in cfg["accounts"]:
                         if _a["id"] == acc["id"]:
                             _a["quota"] = {
                                 "total_seconds": _rq.get("base", 300),
-                                "used_seconds": _rq.get("current", 0),
-                                "remaining_seconds": max(0, _rem),
+                                "used_seconds": max(0, _rq.get("base", 300) - _rem),
+                                "remaining_seconds": _rem,
                                 "total_runs": _rq.get("runs", {}).get("limit", 8),
                                 "used_runs": _rq.get("runs", {}).get("used", 0),
                                 "remaining_runs": _rq.get("runs", {}).get("remaining", 8),
@@ -838,7 +838,7 @@ def generate_video_multi(
             try:
                 _rq = check_quota(acc["token"])
                 if _rq:
-                    _rem = _rq.get("base", 300) - _rq.get("current", 0)
+                    _rem = _rq.get("current", 0)
                     if _rem < 30:
                         print(f"   HF live: {_rem:.0f}s only - skip")
                         last_error = f"{acc.get('name', '?')}: quota 0s ({_rem:.0f}s)"
@@ -846,8 +846,8 @@ def generate_video_multi(
                             if _a["id"] == acc["id"]:
                                 _a["quota"] = {
                                     "total_seconds": _rq.get("base", 300),
-                                    "used_seconds": _rq.get("current", 0),
-                                    "remaining_seconds": max(0, _rem),
+                                    "used_seconds": max(0, _rq.get("base", 300) - _rem),
+                                    "remaining_seconds": _rem,
                                     "total_runs": _rq.get("runs", {}).get("limit", 8),
                                     "used_runs": _rq.get("runs", {}).get("used", 0),
                                     "remaining_runs": _rq.get("runs", {}).get("remaining", 8),
@@ -1025,7 +1025,7 @@ def cmd_check_quota():
             base = q.get("base", 300)
             runs = q.get("runs", {})
             print(f"     ✅ HF User: {info}")
-            print(f"     🎬 GPU:     {current:.1f}s / {base}s | متبقي {base - current:.1f}s")
+            print(f"     🎬 GPU:     {base - current:.1f}s / {base}s | متبقي {current:.1f}s")
             print(f"     🔄 Runs:    {runs.get('used', 0)}/{runs.get('limit', 8)} | "
                   f"متبقي {runs.get('remaining', 8)}")
             print(f"     ⏰ Reset:   {q.get('resetsAt', '?')}")
@@ -1036,8 +1036,8 @@ def cmd_check_quota():
                 if a["id"] == acc["id"]:
                     a["quota"] = {
                         "total_seconds": base,
-                        "used_seconds": current,
-                        "remaining_seconds": max(0, base - current),
+                        "used_seconds": max(0, base - current),
+                        "remaining_seconds": current,
                         "total_runs": runs.get("limit", 8),
                         "used_runs": runs.get("used", 0),
                         "remaining_runs": runs.get("remaining", 8),
