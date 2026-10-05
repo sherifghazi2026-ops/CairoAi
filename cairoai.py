@@ -513,7 +513,7 @@ SPACE_CALLERS = {
 # ═══════════════════════════════════════════════════════════════════════
 def generate_with_account(
     space_info, account, image_path=None, end_frame_path=None,
-    prompt="", duration=None, aspect="9:16", seed=42,
+    prompt="", duration=None, aspect="16:9", seed=42,
     timeout=900.0,
 ):
     """
@@ -534,14 +534,12 @@ def generate_with_account(
         duration = max_dur
 
     # aspect
-    if aspect == "9:16":
-        width, height = 512, 896  # عمودي: 512×896
-
-    elif aspect == "16:9":
-        width, height = 896, 512  # أفقي: 896×512
-
-    elif aspect == "1:1":
+    # aspect — إجبار 16:9 (معظم الـ Spaces بتدعمه)
+    if aspect == "1:1":
         width, height = 640, 640
+    else:
+        # default: 16:9
+        width, height = 896, 512
 
     token = account["token"]
     os.environ["HF_TOKEN"] = token
@@ -577,7 +575,7 @@ def generate_video(
     end_frame=None,
     prompt="",
     duration=None,
-    aspect="9:16",
+    aspect="16:9",
     account=None,
     strict=False,
     output_name=None,
@@ -592,7 +590,7 @@ def generate_video(
         end_frame: مسار الصورة الأخيرة (للـ ltx_turbo)
         prompt: نص الوصف
         duration: المدة بالثواني
-        aspect: نسبة الأبعاد ("9:16" | "16:9" | "1:1")
+        aspect: نسبة الأبعاد ("16:9" | "1:1")
         account: id حساب معين (اختياري)
         strict: لو True، يرفض duration > max بدل ما يقصّ
         output_name: اسم الملف الناتج (اختياري)
@@ -729,7 +727,7 @@ def generate_video_multi(
     end_frame=None,
     prompt="",
     duration=None,
-    aspect="9:16",
+    aspect="16:9",
     sleep_between=10,
     output_name=None,
     timeout=900.0,
@@ -1158,8 +1156,8 @@ def build_parser():
     parser.add_argument("--end-frame", help="مسار الصورة الأخيرة (ltx_turbo)")
     parser.add_argument("--prompt", "-p", help="نص الوصف")
     parser.add_argument("--duration", "-d", type=int, help="المدة بالثواني")
-    parser.add_argument("--aspect", "-a", default="9:16",
-                        choices=["9:16", "16:9", "1:1"], help="نسبة الأبعاد")
+    parser.add_argument("--aspect", "-a", default="16:9",
+                        choices=["16:9", "1:1"], help="نسبة الأبعاد")
     parser.add_argument("--account", help="id الحساب (اختياري)")
     parser.add_argument("--strict", action="store_true",
                         help="رفض duration > max بدل القص")

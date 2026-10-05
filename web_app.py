@@ -872,8 +872,7 @@ textarea { resize: vertical; min-height: 110px; line-height: 1.7; }
           <div>
             <label>📐 الأبعاد</label>
             <select name="aspect">
-              <option value="9:16">📱 عمودي (9:16)</option>
-              <option value="16:9">🖥️ أفقي (16:9)</option>
+              <option value="16:9" selected>🖥️ أفقي (16:9)</option>
               <option value="1:1">⬜ مربع (1:1)</option>
             </select>
           </div>
@@ -1620,7 +1619,7 @@ def index():
                 mode = request.form.get("mode", "img2video")
                 space_key = request.form.get("space", "ltx_distilled")
                 duration = int(request.form.get("duration", 4))
-                aspect = request.form.get("aspect", "9:16")
+                aspect = request.form.get("aspect", "16:9")
                 prompt = request.form.get("prompt", "").strip()
 
                 if not prompt:
